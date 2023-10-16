@@ -11,7 +11,7 @@ static int get_socket(sockserver *server, int id)
 static void set_socket(sockserver *server, int id, int sockfd)
 {
     server->sockets[id].fd = sockfd;
-    server->sockets[id].events = 0;
+    server->sockets[id].events = POLLIN | POLLOUT;
     server->sockets[id].revents = 0;
 }
 
@@ -41,6 +41,10 @@ sockserver *serverinit(int ipv, int socktype, const char *ipaddr, const char *po
 
     if (listen(server->sockfd, SERVER_BACKLOG) == -1)
         goto return_err;
+
+    // Include server socket for poll
+    set_socket(server, 0, server->sockfd);
+    server->num_conn++;
 
     freeaddrinfo(options);
     return server;
@@ -143,4 +147,54 @@ int serverrecv(sockserver *server, int sockid, char *buf, int len)
     }
 
     return bytes;
+}
+
+#define POLL_NONE 0
+#define POLL_ACCEPT 1
+#define POLL_SEND 2
+#define POLL_RECV 4
+
+// Returns status bitmap indicating which events occured. If timeout is negative, serverpoll()
+// will block until an event comes through.
+short serverpoll(sockserver *server, int timeout)
+{
+    // Poll all sockets registred to server. Server socket is first index.
+    server->pollcount = poll(server->sockets, server->num_conn, timeout);
+    short result = POLL_NONE;
+
+    for (int i = 0; i < server->num_conn; i++)
+    {
+        short events = server->sockets[i].revents;
+
+        // Server listening socket
+        if (i == 0 && events & POLLIN)
+            result |= POLL_ACCEPT;
+
+        if (events & POLLIN)
+            result |= POLL_RECV;
+        if (events & POLLOUT)
+            result |= POLL_SEND;
+    }
+
+    return result;
+}
+
+// Returns the number of sockets with new events. Filter can be set to POLL_SEND and/or
+// POLL_RECV to only loop over sockets with pollin or pollout events. Server socket is not
+// counted, so if listening socket is the only one ready, serverpollresult() returns 0.
+// Writes the socket id to sockid.
+int serverpollresult(sockserver *server, int filter, int *sockid)
+{
+    for (int i = 0; i < server->num_conn; i++)
+    {
+        short r = server->sockets[i].revents;
+        if ((r & POLLIN && filter & POLL_RECV) || (r & POLLOUT && filter & POLL_SEND))
+        {
+            *sockid = i;
+            server->sockets[i].revents = 0;
+            return server->pollcount--;
+        }
+    }
+
+    return 0;
 }

@@ -16,6 +16,7 @@ typedef struct sockserver
     int num_conn;           // Number of connections. TCP only
     struct pollfd *sockets; // Array of socket file descriptors
     size_t socket_cap;      // Size of sockets array, default 16
+    int pollcount;          // Number of events from last poll call
 } sockserver;
 
 sockserver *serverinit(int ipv, int socktype, const char *ipaddr, const char *port);
