@@ -21,7 +21,10 @@ typedef struct sockserver
 
 sockserver *serverinit(int ipv, int socktype, const char *ipaddr, const char *port);
 void servershutdown(sockserver *server);
-int serveraccept(sockserver *server);
 
+int serveraccept(sockserver *server);
 int serversend(sockserver *server, int id, const char *data, int len);
 int serverrecv(sockserver *server, int sockid, char *buf, int len);
+
+int serverpollresult(sockserver *server, int filter, int *sockid);
+short serverpoll(sockserver *server, int timeout);
