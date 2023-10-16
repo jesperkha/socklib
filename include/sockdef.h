@@ -24,8 +24,11 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
-#define DEF_YES int yes = 1;
+#define DEF_YES  \
+    int __n = 1; \
+    int yes = &__n;
 #define LINUX
 
 #endif
