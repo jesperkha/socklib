@@ -44,7 +44,7 @@ sockserver *serverinit(int ipv, int socktype, const char *ipaddr, const char *po
 
     // Include server socket for poll
     set_socket(server, 0, server->sockfd);
-    server->num_conn++;
+    server->num_conn = 1;
 
     freeaddrinfo(options);
     return server;
@@ -90,10 +90,24 @@ int serveraccept(sockserver *server)
     return server->num_conn++;
 }
 
-// Closes the given socket. sockid may be reused.
-void serverclosesocket(sockserver *server, int sockid)
+// Closes the given socket. sockid may be reused. Returns 1 on error.
+int serverclose(sockserver *server, int sockid)
 {
-    // Todo: server close socket
+    if (sockid == 0)
+    {
+        set_sockerr("cannot close server socket. use servershutdown()");
+        return 1;
+    }
+
+    if (sockid >= server->num_conn)
+    {
+        set_sockerr("invalid sockid");
+        return 1;
+    }
+
+    close(server->sockets[sockid].fd);
+    set_socket(server, sockid, get_socket(server, --server->num_conn));
+    return 0;
 }
 
 // Send data over given socket id. Returns -1 on error. If a message couldn't be sent
@@ -142,7 +156,7 @@ int serverrecv(sockserver *server, int sockid, char *buf, int len)
     if (bytes == 0)
     {
         set_sockerr("client disconnected");
-        serverclosesocket(server, sockid);
+        serverclose(server, sockid);
         return -2;
     }
 
@@ -150,7 +164,8 @@ int serverrecv(sockserver *server, int sockid, char *buf, int len)
 }
 
 // Returns status bitmap indicating which events occured. If timeout is negative, serverpoll()
-// will block until an event comes through.
+// will block until an event comes through. If a socket is disconnected, it is closed here and
+// result contains POLL_CLOSED.
 short serverpoll(sockserver *server, int timeout)
 {
     // Poll all sockets registred to server. Server socket is first index.
@@ -164,6 +179,14 @@ short serverpoll(sockserver *server, int timeout)
         // Server listening socket
         if (i == 0 && events & POLLIN)
             result |= POLL_ACCEPT;
+
+        // If socket is closed on clients end or an error occured
+        if (events & POLLERR || events & POLLHUP)
+        {
+            serverclose(server, i);
+            result |= POLL_CLOSED;
+            continue;
+        }
 
         if (events & POLLIN)
             result |= POLL_RECV;
