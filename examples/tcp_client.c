@@ -29,7 +29,7 @@ int main(void)
 
     // Wait for response
     LOG("waiting for response...");
-    char buf[64];
+    char buf[64] = {0};
     int bytes = clientrecv(client, buf, 64);
     check_error(bytes, -1);
     check_error(bytes, -2);

@@ -26,7 +26,7 @@ int main(void)
 
     // Wait for message
     LOG("waiting for message...");
-    char buf[64];
+    char buf[64] = {0};
     int bytes = serverrecv(server, client_id, buf, 64);
     check_error(bytes, -1);
     check_error(bytes, -2);
