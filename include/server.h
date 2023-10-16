@@ -5,6 +5,11 @@
 #define SERVER_BACKLOG 10
 #define SERVER_MINSOCKSLEN 16
 
+#define POLL_NONE 0
+#define POLL_ACCEPT 1
+#define POLL_SEND 2
+#define POLL_RECV 4
+
 typedef struct sockserver
 {
     int ip_version;  // IPv4, IPv6

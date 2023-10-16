@@ -149,11 +149,6 @@ int serverrecv(sockserver *server, int sockid, char *buf, int len)
     return bytes;
 }
 
-#define POLL_NONE 0
-#define POLL_ACCEPT 1
-#define POLL_SEND 2
-#define POLL_RECV 4
-
 // Returns status bitmap indicating which events occured. If timeout is negative, serverpoll()
 // will block until an event comes through.
 short serverpoll(sockserver *server, int timeout)
