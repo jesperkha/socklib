@@ -180,7 +180,7 @@ short serverpoll(sockserver *server, int timeout)
 // Writes the socket id to sockid.
 int serverpollresult(sockserver *server, int filter, int *sockid)
 {
-    for (int i = 0; i < server->num_conn; i++)
+    for (int i = 1; i < server->num_conn; i++)
     {
         short r = server->sockets[i].revents;
         if ((r & POLLIN && filter & POLL_RECV) || (r & POLLOUT && filter & POLL_SEND))
