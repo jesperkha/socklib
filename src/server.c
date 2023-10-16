@@ -3,6 +3,18 @@
 
 static int wininit = 0; // Check if windows_init was called
 
+static int get_socket(sockserver *server, int id)
+{
+    return server->sockets[id].fd;
+}
+
+static void set_socket(sockserver *server, int id, int sockfd)
+{
+    server->sockets[id].fd = sockfd;
+    server->sockets[id].events = 0;
+    server->sockets[id].revents = 0;
+}
+
 // Returns new socket server instance using given ip version, socket type, ip address, and port number.
 // If ipaddr is NULL, localhost is used. If port is NULL, the server assigns the first available port.
 // Returns NULL on error.
@@ -16,7 +28,7 @@ sockserver *serverinit(int ipv, int socktype, const char *ipaddr, const char *po
     }
 
     sockserver *server = calloc(1, sizeof(sockserver));
-    server->sockets = malloc(SERVER_MINSOCKSLEN);
+    server->sockets = malloc(SERVER_MINSOCKSLEN * sizeof(struct pollfd));
     server->socket_type = socktype;
     server->ip_version = ipv;
 
@@ -63,11 +75,11 @@ int serveraccept(sockserver *server)
         return -1;
     }
 
-    server->sockets[server->num_conn] = clientfd;
+    set_socket(server, server->num_conn, clientfd);
     if (server->num_conn == server->socket_cap)
     {
         // Realloc not expected to fail
-        int newsize = server->socket_cap + SERVER_MINSOCKSLEN;
+        int newsize = (server->socket_cap + SERVER_MINSOCKSLEN) * sizeof(struct pollfd);
         server->sockets = realloc(server->sockets, newsize);
     }
 
@@ -85,7 +97,7 @@ void serverclosesocket(sockserver *server, int sockid)
 // cases where send() fails when retrying.
 int serversend(sockserver *server, int sockid, const char *data, int len)
 {
-    ssize_t sent = send(server->sockets[sockid], data, len, 0);
+    ssize_t sent = send(get_socket(server, sockid), data, len, 0);
     if (sent == -1)
         goto return_err;
 
@@ -95,7 +107,7 @@ int serversend(sockserver *server, int sockid, const char *data, int len)
         int total = sent;
         while (total < len)
         {
-            sent = send(server->sockets[sockid], data + total, len - total, 0);
+            sent = send(get_socket(server, sockid), data + total, len - total, 0);
             if (sent == -1)
                 goto return_err;
 
@@ -115,7 +127,7 @@ return_err:
 // socket is closed and the function returns -2.
 int serverrecv(sockserver *server, int sockid, char *buf, int len)
 {
-    int bytes = recv(server->sockets[sockid], buf, len, 0);
+    int bytes = recv(get_socket(server, sockid), buf, len, 0);
     if (bytes == -1)
     {
         set_sockerr("server failed to receive");

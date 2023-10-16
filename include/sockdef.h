@@ -15,6 +15,7 @@
 #include <ws2tcpip.h>
 
 #define close closesocket
+#define poll WSAPoll
 #define DEF_YES const char *yes = "1";
 #define WINDOWS
 

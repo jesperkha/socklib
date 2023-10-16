@@ -12,10 +12,10 @@ typedef struct sockserver
     char ip_address[64];
     char port[5];
 
-    int sockfd;        // Main socket file descriptor
-    int num_conn;      // Number of connections. TCP only
-    int *sockets;      // Array of socket file descriptors
-    size_t socket_cap; // Size of sockets array, default 16
+    int sockfd;             // Main socket file descriptor
+    int num_conn;           // Number of connections. TCP only
+    struct pollfd *sockets; // Array of socket file descriptors
+    size_t socket_cap;      // Size of sockets array, default 16
 } sockserver;
 
 sockserver *serverinit(int ipv, int socktype, const char *ipaddr, const char *port);
